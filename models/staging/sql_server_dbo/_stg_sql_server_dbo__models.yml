@@ -1,0 +1,92 @@
+models:
+
+  - name: stg_sql_server_dbo__promos
+    config:
+      contract:
+        enforced: true
+      materialized: view
+    columns:
+      - name: promo_id
+        data_type: VARCHAR(32)
+        description: md5 hashed identifier, unless it's NO_PROMO 
+        constraints:
+          - type: primary_key
+      - name: promo_description
+        data_type: VARCHAR(50)
+        description: the original promo id value.
+        constraints:
+          - type: not_null
+      - name: discount_dollars
+        data_type: FLOAT
+        description: the discounted amount.
+        constraints:
+          - type: not_null
+      - name: is_active
+        data_type: BOOLEAN
+        description: indicates whether the promo is active.
+        constraints:
+          - type: not_null
+      - name: last_loaded_utc
+        data_type: TIMESTAMP_TZ
+        description: indicates when the row was last loaded.
+        constraints:
+          - type: not_null
+          
+  - name: stg_sql_server_dbo__addresses
+    config:
+      contract:
+        enforced: true
+      materialized: view
+    columns:
+      - name: address_id
+        data_type: VARCHAR(50)
+        description: the unique identifier of the address.
+        constraints:
+          - type: primary_key
+      - name: zipcode
+        data_type: NUMBER(38,0)
+        description: The address's zipcode
+      - name: country
+        data_type: VARCHAR(50)
+        description: The country the address can be found in.
+      - name: address
+        data_type: VARCHAR(150)
+        description: The address description
+      - name: state
+        data_type: VARCHAR(50)
+        description: The state the address is found in, if it is in the US
+      - name: last_loaded_utc
+        data_type: TIMESTAMP_TZ
+        description: The time in UTC that the row was last updated.
+      
+  - name: stg_sql_server_dbo__events
+    config: 
+      contract:
+        enforced: true
+      materialized: view
+    columns:
+      - name: event_id
+        data_type: VARCHAR(50)
+        description: Unique identifier for the event.
+      - name: page_url
+        data_type: VARCHAR(200)
+        description: The url the event generated.
+      - name: event_type
+        data_type: VARCHAR(50)
+        description: type of event. can be package_shipped, add_to_cart, checkout or page_view
+      - name: user_id
+        data_type: VARCHAR(50)
+        description: foreign key to user table. Indicates the user that orchestrated the event.
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__users')
+            to_columns: user_id
+      - name: product_id
+        data_type: VARCHAR(50)
+        description: foreign key that identifies the product selected in the event if it is of type add_to_cart
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__products')
+            to_columns: product_id
+      - name: session_id
+        data_type: VARCHAR(50)

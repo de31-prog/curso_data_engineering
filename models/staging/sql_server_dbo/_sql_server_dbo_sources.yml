@@ -1,0 +1,196 @@
+version: 2
+
+sources:
+
+  - name: sql_server_dbo # name of the source 
+    schema: sql_server_dbo # this is the schema our raw data lives in
+    database: ALUMNO31_DEV_BRONZE_DB # this is the name of our database
+
+    quoting:
+      database: false
+      schema: false
+      identifier: false
+
+    freshness:
+      warn_after: {count: 480, period: hour}
+      error_after: {count: 481, period: day}
+
+    tables:
+      - name: addresses
+        loaded_at_field: _fivetran_synced
+        columns:
+          - name: address_id
+            description: Used as unique identifier for the address. Tested to be unique and not null.
+            data_tests:
+              - unique
+              - not_null
+          - name: zipcode
+            description: Contains the zipcode of the address. Tested to be not null.
+            data_tests:
+              - not_null
+          - name: country
+            description: Contains the country of the address. Tested to be not null.
+            data_tests:
+              - not_null
+          - name: address
+            description: Contains the address itself. Tested to be not null.
+            data_tests:
+              - not_null
+          - name: state
+            description: Contains the state the address is found in if it is in the United States. Null if not in the united states.
+          - name: _fivetran_deleted
+            description: Indicates whether the row has been deleted.
+          - name: _fivetran_synced
+            description: Indicates when the row was last updated.
+
+      - name: events
+        loaded_at_field: _fivetran_synced
+        columns:
+        - name: event_id
+          description: Unique identifier for the event.
+          data_tests:
+          - unique
+        - name: page_url
+        - name: event_type
+          description: type of event. Can be package_shipped, add_to_cart, checkout or page_view
+        - name: user_id
+          description: id of the user that started the event
+        - name: product_id
+          description: id of the product that was selected for the event if it was a add_to_cart type. Null otherwise.
+        - name: session_id
+          description: id of the session the event was created in.
+        - name: created_at
+          description: the time the event was created TIMESTAMP_NTZ
+        - name: order_id
+          description: the id of the order that was created from this and possibly more events
+        - name: _fivetran_deleted
+          description: signals whether the row has been deleted.
+        - name: _fivetran_synced  
+          description: Indicates when the row was last updated. Timestamp_TZ
+
+      - name: orders
+        description: table that contains all individual orders created in the systyem
+        loaded_at_field: _fivetran_synced
+        columns:
+        - name: order_id
+          description: unique id for the order
+          data_tests:
+            - unique
+        - name: shipping_service
+          description: the shipping service used for this particular order. Null if there was no shipping.
+        - name: shipping_cost
+          description: the shipping cost if there was shipping involved.
+        - name: address_id
+          description: The address the order is shipped to's idenitifier
+          data_tests:
+          - relationships:
+              field: address_id
+              to: source('sql_server_dbo', 'addresses') #--- NEVER NULL
+        - name: created_at
+          description: The date this was created at TIMESTAMP_TZ
+        - name: promo_id
+          description: id of the promotion used in order. Null if no promotion was used.
+        - name: estimated_delivery_at
+          description: expected date of arrival of order. Can be null. TIMESTAMP_TZ
+        - name: order_cost
+          description: sum cost of the products
+        - name: user_id
+          description: foreign key to the user table. Indicates user that made the order.
+        - name: order_total
+          description: total cost of the order after applying promotion?
+        - name: delivered_at
+          description: date the order was delivered, if it was.
+        - name: tracking_id
+          description: number used by the system to track the order.
+        - name: status
+          description: status of the order. (delivered, preparing, shipped)
+        - name: _fivetran_deleted
+          description: signals whether the row has been deleted.
+        - name: _fivetran_synced  
+          description: Indicates when the row was last updated. TIMESTAMP_TZ
+
+      - name: order_items
+        description: constains the products of each order. many to one relationship with the order table.
+        loaded_at_field: _fivetran_synced
+        columns:
+        - name: order_id
+          description: foreign key to the order table.
+        - name: product_id
+          description: id of one of the products included in the order.
+        - name: quantity
+          description: amount of times the product appears in the order.
+        - name: _fivetran_deleted
+          description: signals whether the row has been deleted.
+        - name: _fivetran_synced  
+          description: Indicates when the row was last updated. TIMESTAMP_TZ
+      
+      - name: products
+        description: Table that contains the different products sold by the company.
+        loaded_at_field: _fivetran_synced
+        columns:
+        - name: product_id
+          description: Unique identifier for the product.
+          data_tests:
+            - unique
+        - name: price
+          description: Product's price. In dollars, presumably.
+          data_tests:
+            - positive_values
+        - name: name
+          description: product's name.
+        - name: inventory
+          description: The amount of items of this product available.
+          data_tests:
+            - positive_values
+        - name: _fivetran_deleted
+          description: signals whether the row has been deleted.
+        - name: _fivetran_synced  
+          description: Indicates when the row was last updated. TIMESTAMP_TZ
+
+      - name: promos
+        description: The promotions that can be applied to orders. Only one per order.
+        loaded_at_field: _fivetran_synced
+        columns:
+        - name: promo_id
+          description: unique identifier for the promo
+          data_tests:
+            - unique
+        - name: discount
+          description: amount discounted percentagewise
+        - name: status
+          description: active or inactive
+        - name: _fivetran_deleted
+          description: signals whether the row has been deleted.
+        - name: _fivetran_synced  
+          description: Indicates when the row was last updated. TIMESTAMP_TZ
+      
+      - name: users
+        description: Table that contains all the users in the system.
+        loaded_at_field: _fivetran_synced
+        columns:
+        - name: user_id
+          description: unique identifier for the user.
+          data_tests:
+            - unique
+        - name: updated_at
+          description: date the user was updated. TIMESTAMP_TZ
+        - name: address_id
+          description: foreign key to the address table. Never null, as it seems you cant be a user without an address.
+          data_tests:
+            - not_null
+        - name: last_name
+          description: user's last name
+        - name: created_at
+          description: date the user was created  TIMESTAMP_TZ
+        - name: phone_number
+          description: The user's phone number.
+        - name: total_orders
+          description: Total amount of orders the user has made.
+        - name: first_name
+          description: the user's first name.
+        - name: email
+          description: the user's email.
+        - name: _fivetran_deleted
+          description: signals whether the row has been deleted.
+        - name: _fivetran_synced  
+          description: Indicates when the row was last updated. TIMESTAMP_TZ
