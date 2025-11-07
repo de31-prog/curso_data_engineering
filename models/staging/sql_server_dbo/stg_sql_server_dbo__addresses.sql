@@ -17,7 +17,6 @@ renamed_and_recasted as (
         CONVERT_TIMEZONE('UTC', _fivetran_synced) AS last_loaded_utc
     from source
     where _fivetran_deleted != 1
-
 )
 
 select * from renamed_and_recasted
