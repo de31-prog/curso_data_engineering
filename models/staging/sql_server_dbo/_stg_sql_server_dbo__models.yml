@@ -1,0 +1,267 @@
+models:
+
+  - name: stg_sql_server_dbo__promos
+    config:
+      contract:
+        enforced: true
+      materialized: view
+    columns:
+      - name: promo_id
+        data_type: VARCHAR(32)
+        description: md5 hashed identifier, unless it's NO_PROMO 
+        constraints:
+          - type: primary_key
+      - name: promo_description
+        data_type: VARCHAR(50)
+        description: the original promo id value.
+        constraints:
+          - type: not_null
+      - name: discount_dollars
+        data_type: FLOAT
+        description: the discounted amount.
+        constraints:
+          - type: not_null
+      - name: is_active
+        data_type: BOOLEAN
+        description: indicates whether the promo is active.
+        constraints:
+          - type: not_null
+      - name: last_loaded_utc
+        data_type: TIMESTAMP_TZ
+        description: indicates when the row was last loaded.
+        constraints:
+          - type: not_null
+          
+  - name: stg_sql_server_dbo__addresses
+    config:
+      contract:
+        enforced: true
+      materialized: view
+    columns:
+      - name: address_id
+        data_type: VARCHAR(50)
+        description: the unique identifier of the address.
+        constraints:
+          - type: primary_key
+      - name: zipcode
+        data_type: NUMBER(38,0)
+        description: The address's zipcode
+      - name: country
+        data_type: VARCHAR(50)
+        description: The country the address can be found in.
+      - name: address
+        data_type: VARCHAR(150)
+        description: The address description
+      - name: state
+        data_type: VARCHAR(50)
+        description: The state the address is found in, if it is in the US
+      - name: last_loaded_utc
+        data_type: TIMESTAMP_TZ
+        description: The time in UTC that the row was last updated.
+      
+  - name: stg_sql_server_dbo__events
+    config: 
+      contract:
+        enforced: true
+      materialized: view
+    columns:
+      - name: event_id
+        data_type: VARCHAR(50)
+        description: Unique identifier for the event.
+        constraints:
+          - type: primary_key
+      - name: page_url
+        data_type: VARCHAR(200)
+        description: The url the event generated.
+      - name: event_type
+        data_type: VARCHAR(50)
+        description: type of event. can be package_shipped, add_to_cart, checkout or page_view
+      - name: user_id
+        data_type: VARCHAR(50)
+        description: foreign key to user table. Indicates the user that orchestrated the event.
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__users')
+            to_columns: user_id
+      - name: product_id
+        data_type: VARCHAR(50)
+        description: foreign key that identifies the product selected in the event if it is of type add_to_cart
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__products')
+            to_columns: product_id
+      - name: session_id
+        data_type: VARCHAR(50)
+        description: foreign key to a table we do not use in our dataset.
+      - name: created_at
+        data_type: TIMESTAMP_TZ
+        description: When the event was created. Originally a TIMESTAMP_NTZ value assumed to have been created in the los angeles time zone.
+      - name: order_id
+        data_type: VARCHAR(50)
+        description: Foreign key to the order related to the event. Events do not always reference an order.
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__orders')
+            to_columns: order_id
+      - name: last_loaded_utc
+        data_type: TIMESTAMP_TZ
+        description: The time in UTC that the row was last updated.
+
+  - name: stg_sql_server_dbo__orders
+    description: Contains information about every order.
+    config: 
+      contract:
+        enforced: true
+      materialized: view
+    columns:
+      - name: order_id
+        data_type: VARCHAR(50)
+        description: The row's primary key.
+        constraints:
+          - type: primary_key
+      - name: shipping_service
+        data_type: VARCHAR(20)
+        description: The shipping service used for the order.
+      - name: shipping_cost_dollars
+        data_type: FLOAT
+        description: the cost in dollars of shipping the order to the client.
+      - name: address_id
+        data_type: VARCHAR(50)
+        description: The foreign key to the address table of the address the order is shipped to.
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__addresses')
+            to_columns: address_id
+      - name: created_at
+        data_type: TIMESTAMP_TZ
+        description: The date and time the order was created.
+      - name: promo_id
+        data_type: VARCHAR(32)
+        description: Foreign key to the promo applied to the order.
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__promos')
+            to_columns: promo_id
+      - name: estimated_delivery
+        data_type: TIMESTAMP_TZ
+        description: Estimated time of arrival of the order to the client.
+      - name: order_cost_dollars
+        data_type: FLOAT
+        description: The price in dollars of the order, shipping cost not included.
+      - name: user_id
+        data_type: VARCHAR(50)
+        description: Foreign key to the user that made the order.
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__users')
+            to_columns: users
+      - name: order_total_dollars
+        data_type: FLOAT
+        description: Total cost of order after applying shipping and promos in dollars.
+      - name: delivered_at
+        data_type: TIMESTAMP_TZ
+        description: Timestamp that indicates when the order was delivered. Null if it hasnt been yet.
+      - name: tracking_id
+        data_type: VARCHAR(50)
+        description: Not a foreign key. Used by the user to tack the order.
+      - name: status
+        data_type: VARCHAR(20)
+        description: status of the order. (delivered, preparing, shipped)
+      - name: last_loaded_utc
+        data_type: TIMESTAMP_TZ
+        description: The time in UTC that the row was last updated.
+
+  - name: stg_sql_server_dbo__order_items
+    description: constains the products of each order. many to one relationship with the order table.
+    config: 
+      contract:
+        enforced: true
+      materialized: view
+    columns:
+      - name: order_id
+        data_type: VARCHAR(50)
+        description: foreign key to the order table.
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__orders')
+            to_columns: order_id
+      - name: product_id
+        data_type: VARCHAR(50)
+        description: id of one of the products included in the order.
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__products')
+            to_columns: order_id
+      - name: quantity
+        data_type: NUMBER(38, 0)
+        description: amount of times the product appears in the order.
+      - name: last_loaded_utc
+        data_type: TIMESTAMP_TZ
+        description: Indicates when the row was last updated.
+  
+  - name: stg_sql_server_dbo__products
+    description: Table that contains the different products sold by the company.
+    config: 
+      contract:
+        enforced: true
+      materialized: view
+    columns:
+      - name: product_id
+        data_type: VARCHAR(50)
+        description: Unique identifier for the product.
+        constraints:
+          - type: primary_key
+      - name: price_dollars
+        data_type: FLOAT
+        description: Product's price in dollars.
+      - name: name
+        data_type: VARCHAR(100)
+        description: The product's name.
+      - name: inventory
+        data_type: NUMBER(38, 0)
+        description: The amount of this product available to sell.
+      - name: last_loaded_utc
+        data_type: TIMESTAMP_TZ
+        description: Indicates when the row was last updated.
+  
+  - name: stg_sql_server_dbo__users
+    description: Table that contains all the users in the system.
+    config: 
+      contract:
+        enforced: true
+      materialized: view
+    columns:
+      - name: user_id
+        data_type: VARCHAR(50)
+        description: unique identifier for the user.
+        constraints:
+          - type: primary_key
+      - name: updated_at
+        data_type: TIMESTAMP_TZ
+        description: date the user was updated.
+      - name: address_id
+        data_type: VARCHAR(50)
+        description: foreign key to the address table. Never null, as it seems you cant be a user without an address.
+        constraints:
+          - type: foreign_key
+            to: ref('stg_sql_server_dbo__addresses')
+            to_columns: address_key
+      - name: last_name
+        data_type: VARCHAR(50)
+        description: user's last name
+      - name: created_at
+        data_type: TIMESTAMP_TZ
+        description: date the user was created
+      - name: phone_number
+        data_type: VARCHAR(20)
+        description: The user's phone number.
+      - name: first_name
+        data_type: VARCHAR(50)
+        description: the user's first name.
+      - name: email
+        data_type: VARCHAR(100)
+        description: the user
+      - name: last_loaded_utc
+        data_type: TIMESTAMP_TZ
+        description: Indicates when the row was last updated.
+  
