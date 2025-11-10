@@ -79,17 +79,9 @@ models:
       - name: user_id
         data_type: VARCHAR(50)
         description: foreign key to user table. Indicates the user that orchestrated the event.
-        constraints:
-          - type: foreign_key
-            to: ref('stg_sql_server_dbo__users')
-            to_columns: user_id
       - name: product_id
         data_type: VARCHAR(50)
         description: foreign key that identifies the product selected in the event if it is of type add_to_cart
-        constraints:
-          - type: foreign_key
-            to: ref('stg_sql_server_dbo__products')
-            to_columns: product_id
       - name: session_id
         data_type: VARCHAR(50)
         description: foreign key to a table we do not use in our dataset.
@@ -99,10 +91,6 @@ models:
       - name: order_id
         data_type: VARCHAR(50)
         description: Foreign key to the order related to the event. Events do not always reference an order.
-        constraints:
-          - type: foreign_key
-            to: ref('stg_sql_server_dbo__orders')
-            to_columns: order_id
       - name: last_loaded_utc
         data_type: TIMESTAMP_TZ
         description: The time in UTC that the row was last updated.
@@ -112,7 +100,7 @@ models:
     config: 
       contract:
         enforced: true
-      materialized: view
+      on_schema_change: append_new_columns
     columns:
       - name: order_id
         data_type: VARCHAR(50)
@@ -128,21 +116,13 @@ models:
       - name: address_id
         data_type: VARCHAR(50)
         description: The foreign key to the address table of the address the order is shipped to.
-        constraints:
-          - type: foreign_key
-            to: ref('stg_sql_server_dbo__addresses')
-            to_columns: address_id
       - name: created_at
         data_type: TIMESTAMP_TZ
         description: The date and time the order was created.
       - name: promo_id
         data_type: VARCHAR(32)
         description: Foreign key to the promo applied to the order.
-        constraints:
-          - type: foreign_key
-            to: ref('stg_sql_server_dbo__promos')
-            to_columns: promo_id
-      - name: estimated_delivery
+      - name: estimated_delivery_at
         data_type: TIMESTAMP_TZ
         description: Estimated time of arrival of the order to the client.
       - name: order_cost_dollars
@@ -151,10 +131,6 @@ models:
       - name: user_id
         data_type: VARCHAR(50)
         description: Foreign key to the user that made the order.
-        constraints:
-          - type: foreign_key
-            to: ref('stg_sql_server_dbo__users')
-            to_columns: users
       - name: order_total_dollars
         data_type: FLOAT
         description: Total cost of order after applying shipping and promos in dollars.
@@ -177,21 +153,16 @@ models:
       contract:
         enforced: true
       materialized: view
+      constraints:
+        type: primary_key
+        columns: [order_id, product_id]
     columns:
       - name: order_id
         data_type: VARCHAR(50)
         description: foreign key to the order table.
-        constraints:
-          - type: foreign_key
-            to: ref('stg_sql_server_dbo__orders')
-            to_columns: order_id
       - name: product_id
         data_type: VARCHAR(50)
         description: id of one of the products included in the order.
-        constraints:
-          - type: foreign_key
-            to: ref('stg_sql_server_dbo__products')
-            to_columns: order_id
       - name: quantity
         data_type: NUMBER(38, 0)
         description: amount of times the product appears in the order.
@@ -242,10 +213,6 @@ models:
       - name: address_id
         data_type: VARCHAR(50)
         description: foreign key to the address table. Never null, as it seems you cant be a user without an address.
-        constraints:
-          - type: foreign_key
-            to: ref('stg_sql_server_dbo__addresses')
-            to_columns: address_key
       - name: last_name
         data_type: VARCHAR(50)
         description: user's last name
