@@ -9,9 +9,10 @@ source as (
 renamed_and_recasted as (
 
     select
-        address_id,
         md5(CONCAT(zipcode, state, country)) AS zipcode_id,
-        address::VARCHAR(150) AS address,
+        zipcode::NUMBER(38,0) AS zipcode,
+        country::VARCHAR(50) AS country,
+        state::VARCHAR(50) AS state,
         last_loaded_utc
     from source
 )

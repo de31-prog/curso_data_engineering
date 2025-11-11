@@ -1,8 +1,19 @@
+{{
+    config(
+        materialized='incremental'
+    )
+}}
+
 with 
 
 source as (
 
     select * from {{ source('sql_server_dbo', 'orders') }}
+    {% if is_incremental() %}
+
+    where _fivetran_synced > (select max(last_loaded_utc) from {{this}})
+
+    {% endif %}
 
 ),
 
@@ -26,7 +37,6 @@ renamed as (
         STATUS::VARCHAR(20) AS status,
         CONVERT_TIMEZONE('UTC', _fivetran_synced) AS last_loaded_utc
     from source
-    where _fivetran_deleted != 1
 )
 
 select * from renamed

@@ -1,0 +1,9 @@
+models:
+  - name: stg_google_sheets__budget
+    config:
+      on_schema_change: append_new_columns
+    columns:
+    - name: _row
+    - name: month
+    - name: quantity
+    - name: last_loaded_utc

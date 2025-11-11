@@ -112,11 +112,16 @@ sources:
       - name: order_items
         description: constains the products of each order. many to one relationship with the order table.
         loaded_at_field: _fivetran_synced
+        data_tests:
+          - dbt_utils.unique_combination_of_columns:
+                combination_of_columns:
+                  - order_id
+                  - product_id
         columns:
         - name: order_id
-          description: foreign key to the order table.
+          description: foreign key to the order table. Half of the primary key.
         - name: product_id
-          description: id of one of the products included in the order.
+          description: foreign key to the product table. Half of the primary key.
         - name: quantity
           description: amount of times the product appears in the order.
         - name: _fivetran_deleted
