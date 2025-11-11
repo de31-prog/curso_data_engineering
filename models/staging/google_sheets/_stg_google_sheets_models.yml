@@ -7,4 +7,3 @@ models:
     - name: month
     - name: quantity
     - name: last_loaded_utc
-      
