@@ -10,7 +10,7 @@ WITH source AS (
 
 {% if is_incremental() %}
 
-	  WHERE _fivetran_synced > (SELECT MAX(_fivetran_synced) FROM {{ this }} )
+	  WHERE _fivetran_synced > (SELECT MAX(last_loaded_utc) FROM {{ this }} )
 
 {% endif %}
     ),
